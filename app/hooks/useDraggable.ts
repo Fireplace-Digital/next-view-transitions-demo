@@ -1,23 +1,14 @@
 import { useEffect } from 'react';
 import type { Dimensions } from '../types/grid';
-import '../types/gsap';  // Import the types
 
 export function useDraggable(
   gridRef: React.RefObject<HTMLDivElement>,
   dimensions: Dimensions,
-  updateCenterImage: () => void
+  updateCenterImage: () => void,
+  isGsapReady: boolean
 ) {
   useEffect(() => {
-    if (!gridRef.current || typeof window === 'undefined') return;
-
-    // Debug logs
-    console.log('GSAP available:', window.gsap);
-    console.log('Draggable available:', window.Draggable);
-    
-    if (!window.gsap || !window.Draggable) {
-      console.error('GSAP or Draggable not available');
-      return;
-    }
+    if (!isGsapReady || !gridRef.current || typeof window === 'undefined') return;
 
     try {
       const draggable = window.Draggable.create(gridRef.current, {
@@ -70,5 +61,5 @@ export function useDraggable(
         console.error('Error cleaning up Draggable:', error);
       }
     };
-  }, [dimensions, updateCenterImage, gridRef]);
+  }, [dimensions, updateCenterImage, gridRef, isGsapReady]);
 }

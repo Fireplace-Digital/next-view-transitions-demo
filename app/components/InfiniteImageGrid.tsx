@@ -1,11 +1,10 @@
 "use client";
 
-import React, { useRef, useCallback } from 'react';
+import React, { useRef, useCallback, useEffect } from 'react';
 import Image from 'next/image';
 import { Link } from "next-view-transitions";
 import { useGsap } from '../hooks/useGsap';
 import { useGridDimensions } from '../hooks/useGridDimensions';
-import { useDraggable } from '../hooks/useDraggable';
 import { moveArrayIndex } from '../utils/arrayUtils';
 import type { GridProps } from '../types/grid';
 
@@ -25,6 +24,19 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
   const rowMidIndex = Math.floor(rowCount / 2);
   
   const dimensions = useGridDimensions(imgMidIndex, rowMidIndex);
+
+  // Basic mouse event debug
+  useEffect(() => {
+    const grid = gridRef.current;
+    if (!grid) return;
+
+    const handleMouseDown = (e: MouseEvent) => {
+      console.log('Mouse down on grid', e.clientX, e.clientY);
+    };
+
+    grid.addEventListener('mousedown', handleMouseDown);
+    return () => grid.removeEventListener('mousedown', handleMouseDown);
+  }, []);
 
   const checkPositions = useCallback((elem: HTMLElement) => {
     let rowIndex = -1;
@@ -195,6 +207,7 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
                     src={image.url}
                     alt={image.title}
                     fill
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     className="rounded-lg transition-opacity hover:opacity-90 object-cover"
                     style={{ viewTransitionName: `image-${image.id}` }}
                     priority={rowIndex === rowMidIndex && colIndex === imgMidIndex}
@@ -208,16 +221,76 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
     });
   }, [dimensions, images, rowCount, imagesPerRow, imgMidIndex, rowMidIndex]);
 
-  // Only initialize draggable when GSAP is ready
-  if (isGsapReady) {
-    useDraggable(gridRef, dimensions, updateCenterImage);
-  }
+  // Draggable initialization with debug logging
+  useEffect(() => {
+    if (!isGsapReady || !gridRef.current || typeof window === 'undefined') {
+      console.log('Draggable prerequisites not met:', {
+        isGsapReady,
+        hasGridRef: !!gridRef.current,
+        hasWindow: typeof window !== 'undefined'
+      });
+      return;
+    }
+
+    console.log('Initializing Draggable with:', {
+      element: gridRef.current,
+      gsap: !!window.gsap,
+      Draggable: !!window.Draggable
+    });
+
+    try {
+      const draggable = window.Draggable.create(gridRef.current, {
+        type: 'x,y',
+        inertia: true,
+        onDrag: () => {
+          console.log('Dragging');
+          updateCenterImage();
+        },
+        onDragStart: () => console.log('Drag started'),
+        onDragEnd: () => console.log('Drag ended'),
+        onThrowUpdate: updateCenterImage,
+        dragResistance: 0.4,
+        resistance: 400,
+        cursor: 'grab',
+        snap: {
+          x: function(endValue: number) {
+            const centerElem = document.elementFromPoint(dimensions.winMidX, dimensions.winMidY);
+            if (!centerElem) return endValue;
+            const bcr = centerElem.getBoundingClientRect();
+            const midX = bcr.x + bcr.width / 2;
+            return endValue + (dimensions.winMidX - midX);
+          },
+          y: function(endValue: number) {
+            const centerElem = document.elementFromPoint(dimensions.winMidX, dimensions.winMidY);
+            if (!centerElem) return endValue;
+            const bcr = centerElem.getBoundingClientRect();
+            const midY = bcr.y + bcr.height / 2;
+            return endValue + (dimensions.winMidY - midY);
+          }
+        }
+      });
+
+      console.log('Draggable instance created:', draggable);
+
+      return () => {
+        console.log('Cleaning up Draggable');
+        if (window.Draggable && gridRef.current) {
+          const instance = window.Draggable.get(gridRef.current);
+          if (instance) {
+            instance.kill();
+          }
+        }
+      };
+    } catch (error) {
+      console.error('Error with Draggable:', error);
+    }
+  }, [isGsapReady, dimensions, updateCenterImage]);
 
   return (
-    <div ref={containerRef} className="overflow-hidden w-screen h-screen fixed inset-0">
+    <div ref={containerRef} className="overflow-hidden w-screen h-screen fixed inset-0 bg-gray-100">
       <div 
         ref={gridRef} 
-        className="relative w-full h-full cursor-grab active:cursor-grabbing"
+        className="relative w-full h-full cursor-grab active:cursor-grabbing border-2 border-blue-500"
         style={{ 
           willChange: 'transform',
           userSelect: 'none',

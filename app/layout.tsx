@@ -12,6 +12,13 @@ export default function RootLayout({
   return (
     <ViewTransitions>
       <html lang="en">
+        <head>
+          {/* Add scripts in order */}
+          <script src="/gsap/gsap.js" />
+          <script src="/gsap/InertiaPlugin.js" />
+          <script src="/gsap/Draggable.js" />
+          <script src="/gsap/init-gsap.js" />
+        </head>
         <body className={inter.className}>{children}</body>
       </html>
     </ViewTransitions>

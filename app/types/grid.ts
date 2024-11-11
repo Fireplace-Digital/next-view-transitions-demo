@@ -1,7 +1,3 @@
-import type { ImageType } from '../components/ImageGallery';
-
-export type { ImageType };
-
 export interface Dimensions {
   winMidX: number;
   winMidY: number;
@@ -12,6 +8,12 @@ export interface Dimensions {
   vertSpacing: number;
   horizOffset: number;
   vertOffset: number;
+}
+
+export interface ImageType {
+  id: string;
+  url: string;
+  title: string;
 }
 
 export interface GridProps {
