@@ -1,5 +1,4 @@
-import { Link } from "next-view-transitions";
-import Image from "next/image";
+import InfiniteImageGrid from './InfiniteImageGrid';
 
 export interface ImageType {
   id: string;
@@ -28,25 +27,7 @@ export const images: ImageType[] = [
 export default function ImageGallery() {
   return (
     <div className="relative">
-      <div className="flex overflow-x-auto gap-4 p-4 hide-scrollbar">
-        {images.map((image) => (
-          <Link
-            key={image.id}
-            className="flex-shrink-0 cursor-pointer"
-            href={`/image/${image.id}`}
-          >
-            <Image
-              src={image.url}
-              alt={image.title}
-              width={300}
-              height={200}
-              className="rounded-lg hover:opacity-90 transition-opacity"
-              style={{ viewTransitionName: `image-${image.id}` }}
-              priority={parseInt(image.id) <= 2}
-            />
-          </Link>
-        ))}
-      </div>
+      <InfiniteImageGrid images={images} />
     </div>
   );
 }
