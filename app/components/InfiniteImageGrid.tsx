@@ -1,24 +1,31 @@
 "use client";
 
-import React, { useRef, useCallback, useEffect } from "react";
+import React, { useRef, useCallback } from "react";
 import Image from "next/image";
 import { Link } from "next-view-transitions";
-import { useGsap } from "../hooks/useGsap";
+import { useGSAP } from "@gsap/react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { Draggable } from "gsap/Draggable";
 import { useGridDimensions } from "../hooks/useGridDimensions";
 import { moveArrayIndex } from "../utils/arrayUtils";
 import type { GridProps } from "../types/grid";
+
+// Register GSAP plugins
+gsap.registerPlugin(ScrollTrigger, Draggable);
 
 const InfiniteImageGrid: React.FC<GridProps> = ({
   images,
   rowCount = 5,
   imagesPerRow = 9,
 }) => {
-  const isGsapReady = useGsap();
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const gridRef = useRef<HTMLDivElement | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
   const rowRefs = useRef<(HTMLDivElement | null)[]>([]);
   const imageRefs = useRef<(HTMLDivElement | null)[][]>([]);
   const lastCenteredElemRef = useRef<HTMLElement | null>(null);
+  const dragInstanceRef = useRef<Draggable | null>(null);
+  const scrollAnimationRef = useRef<gsap.core.Tween | null>(null);
 
   const imgMidIndex = Math.floor(imagesPerRow / 2);
   const rowMidIndex = Math.floor(rowCount / 2);
@@ -26,17 +33,17 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
   const dimensions = useGridDimensions(imgMidIndex, rowMidIndex);
 
   // Basic mouse event debug
-  useEffect(() => {
-    const grid = gridRef.current;
-    if (!grid) return;
+  // useEffect(() => {
+  //   const grid = gridRef.current;
+  //   if (!grid) return;
 
-    const handleMouseDown = (e: MouseEvent) => {
-      console.log("Mouse down on grid", e.clientX, e.clientY);
-    };
+  //   const handleMouseDown = (e: MouseEvent) => {
+  //     console.log("Mouse down on grid", e.clientX, e.clientY);
+  //   };
 
-    grid.addEventListener("mousedown", handleMouseDown);
-    return () => grid.removeEventListener("mousedown", handleMouseDown);
-  }, []);
+  //   grid.addEventListener("mousedown", handleMouseDown);
+  //   return () => grid.removeEventListener("mousedown", handleMouseDown);
+  // }, []);
 
   const checkPositions = useCallback(
     (elem: HTMLElement) => {
@@ -64,20 +71,17 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
           const lastRow = rowRefs.current[rowRefs.current.length - 1];
           if (!lastRow) continue;
 
-          const rowY = window.gsap.getProperty(
-            rowRefs.current[0],
-            "y"
-          ) as number;
+          const rowY = gsap.getProperty(rowRefs.current[0], "y") as number;
 
           if (rowRefs.current.length % 2 === 1) {
             const isOffset = lastRow.dataset.offset === "true";
-            window.gsap.set(lastRow, {
+            gsap.set(lastRow, {
               y: rowY - gutter - boxHeight,
               x: isOffset ? "-=" + boxWidth / 2 : "+=" + boxWidth / 2,
             });
             lastRow.dataset.offset = (!isOffset).toString();
           } else {
-            window.gsap.set(lastRow, { y: rowY - gutter - boxHeight });
+            gsap.set(lastRow, { y: rowY - gutter - boxHeight });
           }
 
           moveArrayIndex(rowRefs.current, rowRefs.current.length - 1, 0);
@@ -88,20 +92,20 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
           const firstRow = rowRefs.current[0];
           if (!firstRow) continue;
 
-          const rowY = window.gsap.getProperty(
+          const rowY = gsap.getProperty(
             rowRefs.current[rowRefs.current.length - 1],
-            "y"
+            "y",
           ) as number;
 
           if (rowRefs.current.length % 2 === 1) {
             const isOffset = firstRow.dataset.offset === "true";
-            window.gsap.set(firstRow, {
+            gsap.set(firstRow, {
               y: rowY + gutter + boxHeight,
               x: isOffset ? "-=" + boxWidth / 2 : "+=" + boxWidth / 2,
             });
             firstRow.dataset.offset = (!isOffset).toString();
           } else {
-            window.gsap.set(firstRow, { y: rowY + gutter + boxHeight });
+            gsap.set(firstRow, { y: rowY + gutter + boxHeight });
           }
 
           moveArrayIndex(rowRefs.current, 0, rowRefs.current.length - 1);
@@ -119,11 +123,11 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
             const firstImage = row[0];
             if (!firstImage) continue;
 
-            const imgX = window.gsap.getProperty(firstImage, "x") as number;
+            const imgX = gsap.getProperty(firstImage, "x") as number;
             const lastImage = row[row.length - 1];
             if (!lastImage) continue;
 
-            window.gsap.set(lastImage, { x: imgX - gutter - boxWidth });
+            gsap.set(lastImage, { x: imgX - gutter - boxWidth });
             moveArrayIndex(row, row.length - 1, 0);
           }
         });
@@ -136,17 +140,17 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
             const lastImage = row[row.length - 1];
             if (!lastImage) continue;
 
-            const imgX = window.gsap.getProperty(lastImage, "x") as number;
+            const imgX = gsap.getProperty(lastImage, "x") as number;
             const firstImage = row[0];
             if (!firstImage) continue;
 
-            window.gsap.set(firstImage, { x: imgX + gutter + boxWidth });
+            gsap.set(firstImage, { x: imgX + gutter + boxWidth });
             moveArrayIndex(row, 0, row.length - 1);
           }
         });
       }
     },
-    [dimensions, imgMidIndex, rowMidIndex]
+    [dimensions, imgMidIndex, rowMidIndex],
   );
 
   const updateCenterImage = useCallback(() => {
@@ -155,7 +159,7 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
 
     const elements = document.elementsFromPoint(winMidX, winMidY);
     const centerImage = elements.find((elem) =>
-      elem.classList.contains("grid-image")
+      elem.classList.contains("grid-image"),
     );
 
     if (
@@ -254,78 +258,126 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
   }, [dimensions, images, rowCount, imagesPerRow, imgMidIndex, rowMidIndex]);
 
   // Draggable initialization with debug logging
-  useEffect(() => {
-    if (!isGsapReady || !gridRef.current || typeof window === "undefined") {
-      console.log("Draggable prerequisites not met:", {
-        isGsapReady,
-        hasGridRef: !!gridRef.current,
-        hasWindow: typeof window !== "undefined",
-      });
-      return;
-    }
+  // Initialize ScrollTrigger and Draggable
+  useGSAP(
+    () => {
+      if (!gridRef.current) return;
 
-    console.log("Initializing Draggable with:", {
-      element: gridRef.current,
-      gsap: !!window.gsap,
-      Draggable: !!window.Draggable,
-    });
+      // Constants for smooth scrolling
+      const SCROLL_SPEED = 1.5;
+      const SCROLL_SMOOTHING = 0.2;
+      const SCROLL_RESISTANCE = 0.25;
 
-    try {
-      const draggable = window.Draggable.create(gridRef.current, {
+      // Initialize Draggable
+      dragInstanceRef.current = Draggable.create(gridRef.current, {
         type: "x,y",
         inertia: true,
-        onDrag: () => {
-          console.log("Dragging");
-          updateCenterImage();
-        },
-        dragClickables: true,
-        onDragStart: () => console.log("Drag started"),
-        onDragEnd: () => console.log("Drag ended"),
+        onDrag: updateCenterImage,
         onThrowUpdate: updateCenterImage,
-        dragResistance: 0.4,
-        resistance: 400,
-        cursor: "grab",
-        allowContextMenu: true,
-        allowNativeTouchScrolling: false,
-        snap: {
-          x: function (endValue: number) {
-            const centerElem = document.elementFromPoint(
-              dimensions.winMidX,
-              dimensions.winMidY
-            );
-            if (!centerElem) return endValue;
+        dragResistance: SCROLL_RESISTANCE,
+        edgeResistance: 0.65,
+        overshootTolerance: 0.5,
+        throwResistance: 0.7,
+        onDragEnd: function () {
+          // Snap to nearest image on drag end
+          if (!gridRef.current) return;
+
+          const centerElem = document.elementFromPoint(
+            dimensions.winMidX,
+            dimensions.winMidY,
+          );
+
+          if (centerElem && centerElem.classList.contains("grid-image")) {
             const bcr = centerElem.getBoundingClientRect();
-            const midX = bcr.x + bcr.width / 2;
-            return endValue + (dimensions.winMidX - midX);
-          },
-          y: function (endValue: number) {
-            const centerElem = document.elementFromPoint(
-              dimensions.winMidX,
-              dimensions.winMidY
-            );
-            if (!centerElem) return endValue;
-            const bcr = centerElem.getBoundingClientRect();
-            const midY = bcr.y + bcr.height / 2;
-            return endValue + (dimensions.winMidY - midY);
-          },
+            const currentX = gsap.getProperty(gridRef.current, "x") as number;
+            const currentY = gsap.getProperty(gridRef.current, "y") as number;
+            const targetX =
+              currentX + (dimensions.winMidX - (bcr.x + bcr.width / 2));
+            const targetY =
+              currentY + (dimensions.winMidY - (bcr.y + bcr.height / 2));
+
+            gsap.to(gridRef.current, {
+              x: targetX,
+              y: targetY,
+              duration: 0.3,
+              ease: "power2.out",
+              onUpdate: updateCenterImage,
+            });
+          }
         },
+      })[0];
+
+      // Wheel event handler for smooth scrolling
+      const handleWheel = (e: WheelEvent) => {
+        e.preventDefault();
+
+        if (scrollAnimationRef.current) {
+          scrollAnimationRef.current.kill();
+        }
+
+        const currentX = gsap.getProperty(gridRef.current, "x") as number;
+        const currentY = gsap.getProperty(gridRef.current, "y") as number;
+
+        // Determine primary scroll direction
+        const isHorizontal = Math.abs(e.deltaX) > Math.abs(e.deltaY);
+        const deltaX = isHorizontal ? e.deltaX : 0;
+        const deltaY = !isHorizontal ? e.deltaY : 0;
+
+        scrollAnimationRef.current = gsap.to(gridRef.current, {
+          x: currentX - deltaX * SCROLL_SPEED,
+          y: currentY - deltaY * SCROLL_SPEED,
+          duration: SCROLL_SMOOTHING,
+          ease: "power2.out",
+          onUpdate: updateCenterImage,
+          onComplete: () => {
+            // Optional: Snap to nearest image after scroll
+            if (!gridRef.current) return;
+
+            const centerElem = document.elementFromPoint(
+              dimensions.winMidX,
+              dimensions.winMidY,
+            );
+
+            if (centerElem && centerElem.classList.contains("grid-image")) {
+              const bcr = centerElem.getBoundingClientRect();
+              const finalX =
+                currentX + (dimensions.winMidX - (bcr.x + bcr.width / 2));
+              const finalY =
+                currentY + (dimensions.winMidY - (bcr.y + bcr.height / 2));
+
+              gsap.to(gridRef.current, {
+                x: finalX,
+                y: finalY,
+                duration: 0.3,
+                ease: "power2.out",
+                onUpdate: updateCenterImage,
+              });
+            }
+          },
+        });
+      };
+
+      gridRef.current.addEventListener("wheel", handleWheel, {
+        passive: false,
       });
 
-      console.log("Draggable instance created:", draggable);
-
+      // Cleanup function
       return () => {
-        console.log("Cleaning up Draggable");
-        if (window.Draggable && gridRef.current) {
-          const instance = window.Draggable.get(gridRef.current);
-          if (instance) {
-            instance.kill();
-          }
+        gridRef.current?.removeEventListener("wheel", handleWheel);
+        if (dragInstanceRef.current) {
+          dragInstanceRef.current.kill();
+        }
+        if (scrollAnimationRef.current) {
+          scrollAnimationRef.current.kill();
         }
       };
-    } catch (error) {
-      console.error("Error with Draggable:", error);
-    }
-  }, [isGsapReady, dimensions, updateCenterImage]);
+    },
+    {
+      scope: containerRef,
+      dependencies: [dimensions, updateCenterImage],
+    },
+  );
+
   return (
     <div
       ref={containerRef}
@@ -338,14 +390,11 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
           willChange: "transform",
           userSelect: "none",
           touchAction: "none",
-          // Instead of inset-0, use explicit positioning
           top: 0,
           left: 0,
           width: `calc(100% + ${dimensions.horizSpacing * 2}px)`,
           height: `calc(100% + ${dimensions.vertSpacing * 2}px)`,
           padding: `${dimensions.vertSpacing}px ${dimensions.horizSpacing}px`,
-          // Border for debugging
-          border: "2px solid red",
         }}
       >
         {renderGrid()}
