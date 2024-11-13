@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useCallback } from "react";
+import React, { useRef, useCallback, useState } from "react";
 import Image from "next/image";
 import { Link } from "next-view-transitions";
 import { useGSAP } from "@gsap/react";
@@ -8,6 +8,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Draggable } from "gsap/Draggable";
 import { useGridDimensions } from "../hooks/useGridDimensions";
+import { useGridInteractions } from "../hooks/useGridInteractions";
 import { moveArrayIndex } from "../utils/arrayUtils";
 import type { GridProps } from "../types/grid";
 
@@ -24,26 +25,12 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
   const rowRefs = useRef<(HTMLDivElement | null)[]>([]);
   const imageRefs = useRef<(HTMLDivElement | null)[][]>([]);
   const lastCenteredElemRef = useRef<HTMLElement | null>(null);
-  const dragInstanceRef = useRef<Draggable | null>(null);
-  const scrollAnimationRef = useRef<gsap.core.Tween | null>(null);
+  const [scrollAnimation, setScrollAnimation] = useState<gsap.core.Tween | null>(null);
 
   const imgMidIndex = Math.floor(imagesPerRow / 2);
   const rowMidIndex = Math.floor(rowCount / 2);
 
   const dimensions = useGridDimensions(imgMidIndex, rowMidIndex);
-
-  // Basic mouse event debug
-  // useEffect(() => {
-  //   const grid = gridRef.current;
-  //   if (!grid) return;
-
-  //   const handleMouseDown = (e: MouseEvent) => {
-  //     console.log("Mouse down on grid", e.clientX, e.clientY);
-  //   };
-
-  //   grid.addEventListener("mousedown", handleMouseDown);
-  //   return () => grid.removeEventListener("mousedown", handleMouseDown);
-  // }, []);
 
   const checkPositions = useCallback(
     (elem: HTMLElement) => {
@@ -173,7 +160,6 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
   }, [dimensions, checkPositions]);
 
   const renderGrid = useCallback(() => {
-    console.log("Rendering grid with dimensions:", dimensions);
     const rows = Array(rowCount).fill(null);
     const {
       boxWidth,
@@ -200,10 +186,7 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
           style={{
             transform: `translate(${rowX}px, ${rowY}px)`,
             height: vertSpacing,
-            // Extend width to cover all images plus some extra for infinite scrolling
-            width: horizSpacing * (imagesPerRow * 2), // Double the width
-            // Or calculate exact width needed:
-            // width: boxWidth * imagesPerRow + horizSpacing * (imagesPerRow - 1) + horizSpacing * 2,
+            width: horizSpacing * (imagesPerRow * 2),
             minWidth: "100%",
             background: "transparent",
           }}
@@ -229,7 +212,6 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
                   transform: `translateX(${imageX}px)`,
                   width: boxWidth,
                   height: boxHeight,
-                  // Center the image vertically in the row
                   top: (vertSpacing - boxHeight) / 2,
                 }}
               >
@@ -257,125 +239,14 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
     });
   }, [dimensions, images, rowCount, imagesPerRow, imgMidIndex, rowMidIndex]);
 
-  // Draggable initialization with debug logging
-  // Initialize ScrollTrigger and Draggable
-  useGSAP(
-    () => {
-      if (!gridRef.current) return;
-
-      // Constants for smooth scrolling
-      const SCROLL_SPEED = 1.5;
-      const SCROLL_SMOOTHING = 0.2;
-      const SCROLL_RESISTANCE = 0.25;
-
-      // Initialize Draggable
-      dragInstanceRef.current = Draggable.create(gridRef.current, {
-        type: "x,y",
-        inertia: true,
-        onDrag: updateCenterImage,
-        onThrowUpdate: updateCenterImage,
-        dragResistance: SCROLL_RESISTANCE,
-        edgeResistance: 0.65,
-        overshootTolerance: 0.5,
-        throwResistance: 0.7,
-        onDragEnd: function () {
-          // Snap to nearest image on drag end
-          if (!gridRef.current) return;
-
-          const centerElem = document.elementFromPoint(
-            dimensions.winMidX,
-            dimensions.winMidY,
-          );
-
-          if (centerElem && centerElem.classList.contains("grid-image")) {
-            const bcr = centerElem.getBoundingClientRect();
-            const currentX = gsap.getProperty(gridRef.current, "x") as number;
-            const currentY = gsap.getProperty(gridRef.current, "y") as number;
-            const targetX =
-              currentX + (dimensions.winMidX - (bcr.x + bcr.width / 2));
-            const targetY =
-              currentY + (dimensions.winMidY - (bcr.y + bcr.height / 2));
-
-            gsap.to(gridRef.current, {
-              x: targetX,
-              y: targetY,
-              duration: 0.3,
-              ease: "power2.out",
-              onUpdate: updateCenterImage,
-            });
-          }
-        },
-      })[0];
-
-      // Wheel event handler for smooth scrolling
-      const handleWheel = (e: WheelEvent) => {
-        e.preventDefault();
-
-        if (scrollAnimationRef.current) {
-          scrollAnimationRef.current.kill();
-        }
-
-        const currentX = gsap.getProperty(gridRef.current, "x") as number;
-        const currentY = gsap.getProperty(gridRef.current, "y") as number;
-
-        // Determine primary scroll direction
-        const isHorizontal = Math.abs(e.deltaX) > Math.abs(e.deltaY);
-        const deltaX = isHorizontal ? e.deltaX : 0;
-        const deltaY = !isHorizontal ? e.deltaY : 0;
-
-        scrollAnimationRef.current = gsap.to(gridRef.current, {
-          x: currentX - deltaX * SCROLL_SPEED,
-          y: currentY - deltaY * SCROLL_SPEED,
-          duration: SCROLL_SMOOTHING,
-          ease: "power2.out",
-          onUpdate: updateCenterImage,
-          onComplete: () => {
-            // Optional: Snap to nearest image after scroll
-            if (!gridRef.current) return;
-
-            const centerElem = document.elementFromPoint(
-              dimensions.winMidX,
-              dimensions.winMidY,
-            );
-
-            if (centerElem && centerElem.classList.contains("grid-image")) {
-              const bcr = centerElem.getBoundingClientRect();
-              const finalX =
-                currentX + (dimensions.winMidX - (bcr.x + bcr.width / 2));
-              const finalY =
-                currentY + (dimensions.winMidY - (bcr.y + bcr.height / 2));
-
-              gsap.to(gridRef.current, {
-                x: finalX,
-                y: finalY,
-                duration: 0.3,
-                ease: "power2.out",
-                onUpdate: updateCenterImage,
-              });
-            }
-          },
-        });
-      };
-
-      gridRef.current.addEventListener("wheel", handleWheel, {
-        passive: false,
-      });
-
-      // Cleanup function
-      return () => {
-        gridRef.current?.removeEventListener("wheel", handleWheel);
-        if (dragInstanceRef.current) {
-          dragInstanceRef.current.kill();
-        }
-        if (scrollAnimationRef.current) {
-          scrollAnimationRef.current.kill();
-        }
-      };
-    },
-    {
-      scope: containerRef,
-      dependencies: [dimensions, updateCenterImage],
-    },
+  // Use the grid interactions hook
+  const draggable = useGridInteractions(
+    containerRef,
+    gridRef,
+    scrollAnimation,
+    setScrollAnimation,
+    dimensions,
+    updateCenterImage
   );
 
   return (
