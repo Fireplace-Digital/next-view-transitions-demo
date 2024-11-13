@@ -6,13 +6,14 @@ import { Link } from "next-view-transitions";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { InertiaPlugin } from "gsap/InertiaPlugin";
 import { Draggable } from "gsap/Draggable";
 import { useGridDimensions } from "../hooks/useGridDimensions";
 import { moveArrayIndex } from "../utils/arrayUtils";
 import type { GridProps } from "../types/grid";
 
 // Register GSAP plugins
-gsap.registerPlugin(ScrollTrigger, Draggable);
+gsap.registerPlugin(useGSAP, ScrollTrigger, Draggable, InertiaPlugin);
 
 const InfiniteImageGrid: React.FC<GridProps> = ({
   images,
@@ -263,23 +264,82 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
     () => {
       if (!gridRef.current) return;
 
-      // Constants for smooth scrolling
-      const SCROLL_SPEED = 1.5;
+      // Constants for inertia behavior
+      const SCROLL_SPEED = 2.5; // Back to original scroll speed
+      const SCROLL_MULTIPLIER = 1.2; // Additional multiplier for momentum
+      const SCROLL_RESISTANCE = 0.4;
+      const SNAP_DURATION = 0.3;
+      const MINIMUM_VELOCITY = 0.01;
+      const INERTIA_DURATION = 1.5;
       const SCROLL_SMOOTHING = 0.2;
-      const SCROLL_RESISTANCE = 0.25;
 
-      // Initialize Draggable
+      // Helper function for snapping to nearest image
+      const snapToNearestImage = () => {
+        if (!gridRef.current) return;
+
+        const centerElem = document.elementFromPoint(
+          dimensions.winMidX,
+          dimensions.winMidY,
+        );
+
+        if (centerElem && centerElem.classList.contains("grid-image")) {
+          const bcr = centerElem.getBoundingClientRect();
+          const currentX = gsap.getProperty(gridRef.current, "x") as number;
+          const currentY = gsap.getProperty(gridRef.current, "y") as number;
+          const targetX =
+            currentX + (dimensions.winMidX - (bcr.x + bcr.width / 2));
+          const targetY =
+            currentY + (dimensions.winMidY - (bcr.y + bcr.height / 2));
+
+          gsap.to(gridRef.current, {
+            x: targetX,
+            y: targetY,
+            duration: SNAP_DURATION,
+            ease: "power2.out",
+            onUpdate: updateCenterImage,
+          });
+        }
+      };
+
+      // Start tracking grid movement for inertia
+      InertiaPlugin.track(gridRef.current, "x,y");
+
+      // Initialize Draggable with inertia
       dragInstanceRef.current = Draggable.create(gridRef.current, {
         type: "x,y",
         inertia: true,
         onDrag: updateCenterImage,
         onThrowUpdate: updateCenterImage,
         dragResistance: SCROLL_RESISTANCE,
-        edgeResistance: 0.65,
+        throwProps: true,
+        edgeResistance: SCROLL_RESISTANCE,
         overshootTolerance: 0.5,
-        throwResistance: 0.7,
-        onDragEnd: function () {
-          // Snap to nearest image on drag end
+        throwResistance: SCROLL_RESISTANCE,
+        snap: {
+          x: function (endValue: number) {
+            const centerElem = document.elementFromPoint(
+              dimensions.winMidX,
+              dimensions.winMidY,
+            );
+            if (!centerElem?.classList.contains("grid-image")) return endValue;
+            const bcr = centerElem.getBoundingClientRect();
+            return endValue + (dimensions.winMidX - (bcr.x + bcr.width / 2));
+          },
+          y: function (endValue: number) {
+            const centerElem = document.elementFromPoint(
+              dimensions.winMidX,
+              dimensions.winMidY,
+            );
+            if (!centerElem?.classList.contains("grid-image")) return endValue;
+            const bcr = centerElem.getBoundingClientRect();
+            return endValue + (dimensions.winMidY - (bcr.y + bcr.height / 2));
+          },
+        },
+        onThrowComplete: function () {
+          updateCenterImage();
+        },
+        onDragEnd: function (e) {
+          // Use velocityX and velocityY directly from the Draggable instance
           if (!gridRef.current) return;
 
           const centerElem = document.elementFromPoint(
@@ -299,15 +359,22 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
             gsap.to(gridRef.current, {
               x: targetX,
               y: targetY,
-              duration: 0.3,
+              duration: SNAP_DURATION,
               ease: "power2.out",
               onUpdate: updateCenterImage,
+              onComplete: snapToNearestImage,
             });
+          }
+        },
+        onClick: function () {
+          // Prevent click when dragging
+          if (Math.abs(this.deltaX) < 3 && Math.abs(this.deltaY) < 3) {
+            // Handle click
           }
         },
       })[0];
 
-      // Wheel event handler for smooth scrolling
+      // Enhanced wheel handler with inertia
       const handleWheel = (e: WheelEvent) => {
         e.preventDefault();
 
@@ -323,14 +390,25 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
         const deltaX = isHorizontal ? e.deltaX : 0;
         const deltaY = !isHorizontal ? e.deltaY : 0;
 
+        // Use inertia while maintaining the grid structure
         scrollAnimationRef.current = gsap.to(gridRef.current, {
           x: currentX - deltaX * SCROLL_SPEED,
           y: currentY - deltaY * SCROLL_SPEED,
           duration: SCROLL_SMOOTHING,
-          ease: "power2.out",
+          ease: "power3.out", // Slightly modified ease for better inertia feel
+          inertia: {
+            x: {
+              velocity: -deltaX * SCROLL_SPEED,
+              end: currentX - deltaX * SCROLL_SPEED,
+            },
+            y: {
+              velocity: -deltaY * SCROLL_SPEED,
+              end: currentY - deltaY * SCROLL_SPEED,
+            },
+          },
           onUpdate: updateCenterImage,
           onComplete: () => {
-            // Optional: Snap to nearest image after scroll
+            // Snap to nearest image after scroll
             if (!gridRef.current) return;
 
             const centerElem = document.elementFromPoint(
@@ -370,6 +448,7 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
         if (scrollAnimationRef.current) {
           scrollAnimationRef.current.kill();
         }
+        InertiaPlugin.untrack(gridRef.current);
       };
     },
     {

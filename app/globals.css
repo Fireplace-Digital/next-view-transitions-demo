@@ -31,49 +31,9 @@
   display: none;
 }
 
-::view-transition-old(*),
-::view-transition-new(*) {
-  animation-duration: 0.3s;
-}
-
-::view-transition-old(root),
-::view-transition-new(root) {
-  animation: none;
-  mix-blend-mode: normal;
-}
-
-::view-transition-group(image-*) {
-  animation-duration: 0.3s;
-}
-
-::view-transition-old(image-*) {
-  animation: scale-and-fade-out 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-::view-transition-new(image-*) {
-  animation: scale-and-fade-in 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-@keyframes scale-and-fade-in {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes scale-and-fade-out {
-  from {
-    opacity: 1;
-    transform: scale(1);
-  }
-  to {
-    opacity: 0;
-    transform: scale(0.95);
-  }
+.image-wrapper {
+  overflow: hidden;
+  border-radius: 0.5rem;
 }
 
 @layer base {
