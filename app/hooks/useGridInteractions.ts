@@ -21,83 +21,97 @@ export function useGridInteractions(
       const gridElement = gridRef.current;
       if (!gridElement) return;
 
+      console.log("Initializing Draggable with element:", gridElement);
+
       // Kill existing draggable if it exists
       if (draggableRef.current) {
+        console.log("Killing existing Draggable instance");
         draggableRef.current.kill();
       }
 
       // Create new draggable instance
       const instance = Draggable.create(gridElement, {
         type: "x,y",
+        trigger: containerRef.current,
         inertia: true,
         dragResistance: 0.2,
+        throwResistance: 0.4,
         edgeResistance: 0.65,
-        throwResistance: 0.25,
-        minDuration: 0.5,
         maxDuration: 2,
-        onDrag: updateCenterImage,
-        onThrowUpdate: function() {
-          updateCenterImage();
-          console.log("Throw velocity:", this.getVelocity());
+        minDuration: 0.5,
+        overshootTolerance: 0.8,
+
+        onDragStart: function () {
+          console.log("Drag started", {
+            startX: this.startX,
+            startY: this.startY,
+            pointerX: this.pointerX,
+            pointerY: this.pointerY,
+          });
+          gsap.killTweensOf(gridElement);
         },
-        onDragEnd: function() {
-          const vx = this.getVelocity("x");
-          const vy = this.getVelocity("y");
+
+        onDrag: function () {
+          console.log("Dragging", {
+            x: this.x,
+            y: this.y,
+            deltaX: this.deltaX,
+            deltaY: this.deltaY,
+            pointerSpeed: this.pointerSpeed,
+          });
+          updateCenterImage();
+        },
+
+        onDragEnd: function () {
+          console.log("Drag ended", {
+            endX: this.endX,
+            endY: this.endY,
+            deltaX: this.deltaX,
+            deltaY: this.deltaY,
+            pointerSpeed: this.pointerSpeed,
+            velocity: {
+              x: this.tween?.vars?.velocity?.[0] || "no velocity x",
+              y: this.tween?.vars?.velocity?.[1] || "no velocity y",
+            },
+          });
+        },
+
+        onThrowUpdate: function () {
+          console.log("Throw updating", {
+            x: this.x,
+            y: this.y,
+            progress: this.tween?.progress() || 0,
+            timeScale: this.tween?.timeScale() || 0,
+          });
+          updateCenterImage();
+        },
+
+        onThrowComplete: function () {
+          console.log("Throw completed");
           const currentX = gsap.getProperty(gridElement, "x") as number;
           const currentY = gsap.getProperty(gridElement, "y") as number;
-          
-          if (Math.abs(vx) > 20 || Math.abs(vy) > 20) {
-            const momentum = Math.sqrt(vx * vx + vy * vy);
-            const duration = Math.min(2, momentum / 2000);
-            
+
+          const centerElem = document.elementFromPoint(
+            dimensions.winMidX,
+            dimensions.winMidY
+          );
+
+          if (centerElem?.classList.contains("grid-image")) {
+            console.log("Snapping to center image");
+            const bcr = centerElem.getBoundingClientRect();
             gsap.to(gridElement, {
-              x: currentX + (vx * 0.5),
-              y: currentY + (vy * 0.5),
-              duration: duration,
+              x: currentX + (dimensions.winMidX - (bcr.x + bcr.width / 2)),
+              y: currentY + (dimensions.winMidY - (bcr.y + bcr.height / 2)),
+              duration: 0.3,
               ease: "power2.out",
               onUpdate: updateCenterImage,
-              onComplete: () => {
-                const finalX = gsap.getProperty(gridElement, "x") as number;
-                const finalY = gsap.getProperty(gridElement, "y") as number;
-                
-                const centerElem = document.elementFromPoint(
-                  dimensions.winMidX,
-                  dimensions.winMidY
-                );
-                
-                if (centerElem?.classList.contains("grid-image")) {
-                  const bcr = centerElem.getBoundingClientRect();
-                  gsap.to(gridElement, {
-                    x: finalX + (dimensions.winMidX - (bcr.x + bcr.width / 2)),
-                    y: finalY + (dimensions.winMidY - (bcr.y + bcr.height / 2)),
-                    duration: 0.3,
-                    ease: "power2.out",
-                    onUpdate: updateCenterImage
-                  });
-                }
-              }
             });
-          } else {
-            const centerElem = document.elementFromPoint(
-              dimensions.winMidX,
-              dimensions.winMidY
-            );
-            
-            if (centerElem?.classList.contains("grid-image")) {
-              const bcr = centerElem.getBoundingClientRect();
-              gsap.to(gridElement, {
-                x: currentX + (dimensions.winMidX - (bcr.x + bcr.width / 2)),
-                y: currentY + (dimensions.winMidY - (bcr.y + bcr.height / 2)),
-                duration: 0.3,
-                ease: "power2.out",
-                onUpdate: updateCenterImage
-              });
-            }
           }
-        }
+        },
       })[0];
 
       draggableRef.current = instance;
+      console.log("Draggable instance created:", instance);
 
       const handleWheel = (e: WheelEvent) => {
         e.preventDefault();
@@ -122,13 +136,15 @@ export function useGridInteractions(
           onComplete: () => {
             const centerElem = document.elementFromPoint(
               dimensions.winMidX,
-              dimensions.winMidY,
+              dimensions.winMidY
             );
 
             if (centerElem?.classList.contains("grid-image")) {
               const bcr = centerElem.getBoundingClientRect();
-              const finalX = currentX + (dimensions.winMidX - (bcr.x + bcr.width / 2));
-              const finalY = currentY + (dimensions.winMidY - (bcr.y + bcr.height / 2));
+              const finalX =
+                currentX + (dimensions.winMidX - (bcr.x + bcr.width / 2));
+              const finalY =
+                currentY + (dimensions.winMidY - (bcr.y + bcr.height / 2));
 
               gsap.to(gridElement, {
                 x: finalX,
@@ -144,12 +160,13 @@ export function useGridInteractions(
         setScrollAnimation(newAnimation);
       };
 
-      gridElement.addEventListener("wheel", handleWheel, {
+      containerRef.current?.addEventListener("wheel", handleWheel, {
         passive: false,
       });
 
       return () => {
-        gridElement.removeEventListener("wheel", handleWheel);
+        console.log("Cleaning up Draggable");
+        containerRef.current?.removeEventListener("wheel", handleWheel);
         if (draggableRef.current) {
           draggableRef.current.kill();
           draggableRef.current = null;
@@ -161,7 +178,7 @@ export function useGridInteractions(
     },
     {
       scope: containerRef,
-      dependencies: [dimensions, updateCenterImage, scrollAnimation]
+      dependencies: [dimensions, updateCenterImage, scrollAnimation],
     }
   );
 
