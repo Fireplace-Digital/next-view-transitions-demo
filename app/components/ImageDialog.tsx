@@ -9,12 +9,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { DialogDescription } from "@radix-ui/react-dialog";
 
 interface ImageDialogProps {
   image: ImageType;
+  searchParams: { [key: string]: string | string[] | undefined }
 }
 
-export default function ImageDialog({ image }: ImageDialogProps) {
+export default function ImageDialog({ image, searchParams }: ImageDialogProps) {
   const router = useTransitionRouter();
 
   return (
@@ -46,7 +48,7 @@ export default function ImageDialog({ image }: ImageDialogProps) {
                 alt={image.title}
                 fill
                 className="rounded-lg object-contain"
-                style={{ viewTransitionName: `image-${image.id}` }}
+                style={{ viewTransitionName: `image-${image.id}?r=${searchParams.r}&c=${searchParams.c}` }}
                 priority
               />
             </div>
@@ -58,6 +60,7 @@ export default function ImageDialog({ image }: ImageDialogProps) {
               >
                 {image.title}
               </DialogTitle>
+              <DialogDescription />
             </DialogHeader>
           </div>
         </div>
