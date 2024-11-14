@@ -301,8 +301,9 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
                 }}
               >
                 <Link
-                  href={`/image/${image.id}?r=${rowIndex}&c=${colIndex}`}
+                  href={`/image/${image.id}?r=${rowIndex}&c=${colIndex}&p=${(rowIndex * imagesPerRow + colIndex) % images.length}`}
                   className="block w-full h-full relative"
+                  prefetch
                 >
                   <Image
                     src={image.url}
@@ -310,7 +311,7 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
                     fill
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     className="rounded-lg transition-opacity hover:opacity-90 object-cover"
-                    style={{ viewTransitionName: `image-${image.id}?r=${rowIndex}&c=${colIndex}` }}
+                    style={{ viewTransitionName: `image-${image.id}-pos-${rowIndex}-${colIndex}` }}
                     priority={
                       rowIndex === rowMidIndex && colIndex === imgMidIndex
                     }

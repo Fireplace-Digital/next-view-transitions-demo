@@ -13,10 +13,23 @@ import { DialogDescription } from "@radix-ui/react-dialog";
 
 interface ImageDialogProps {
   image: ImageType;
-  searchParams: { [key: string]: string | string[] | undefined }
+  searchParams: { [key: string]: string | string[] | undefined };
+  previousImageId: string;
+  nextImageId: string;
+  previousImageParams: { r: number; c: number; p: number };
+  nextImageParams: { r: number; c: number; p: number };
+  position: { r: number; c: number };
 }
 
-export default function ImageDialog({ image, searchParams }: ImageDialogProps) {
+export default function ImageDialog({
+  image,
+  searchParams,
+  previousImageId,
+  nextImageId,
+  previousImageParams,
+  nextImageParams,
+  position,
+}: ImageDialogProps) {
   const router = useTransitionRouter();
 
   return (
@@ -38,29 +51,56 @@ export default function ImageDialog({ image, searchParams }: ImageDialogProps) {
             </Link>
           </DialogClose>
 
+          {previousImageId && previousImageParams && (
+            <Link
+              href={`/image/${previousImageId}?r=${previousImageParams.r}&c=${previousImageParams.c}&p=${previousImageParams.p}`}
+              className="absolute left-6 top-1/2 -translate-y-1/2 z-10"
+            >
+              <button
+                className="rounded-full bg-white/10 p-3 text-white hover:bg-white/20 transition-colors"
+                aria-label="Previous image"
+              >
+                ←
+              </button>
+            </Link>
+          )}
+
+          {nextImageId && nextImageParams && (
+            <Link
+              href={`/image/${nextImageId}?r=${nextImageParams.r}&c=${nextImageParams.c}&p=${nextImageParams.p}`}
+              className="absolute right-6 top-1/2 -translate-y-1/2 z-10"
+            >
+              <button
+                className="rounded-full bg-white/10 p-3 text-white hover:bg-white/20 transition-colors"
+                aria-label="Next image"
+              >
+                →
+              </button>
+            </Link>
+          )}
+
           <div
             className="relative max-w-7xl mx-auto w-full h-full flex flex-col items-center justify-center p-6"
-            style={{ viewTransitionName: `container-${image.id}` }}
+            style={{ viewTransitionName: `container-${image.id}-pos-${position.r}-${position.c}` }}
           >
             <div className="relative w-full aspect-[4/3] max-h-[80vh]">
               <Image
                 src={image.url}
                 alt={image.title}
-                fill
+                width={800}
+                height={600}
                 className="rounded-lg object-contain"
-                style={{ viewTransitionName: `image-${image.id}?r=${searchParams.r}&c=${searchParams.c}` }}
-                priority
+                style={{ viewTransitionName: `image-${image.id}-pos-${position.r}-${position.c}` }}
               />
             </div>
 
             <DialogHeader className="w-full mt-4">
               <DialogTitle
                 className="text-2xl text-white text-center"
-                style={{ viewTransitionName: `title-${image.id}` }}
+                style={{ viewTransitionName: `title-${image.id}-pos-${position.r}-${position.c}` }}
               >
                 {image.title}
               </DialogTitle>
-              <DialogDescription />
             </DialogHeader>
           </div>
         </div>
