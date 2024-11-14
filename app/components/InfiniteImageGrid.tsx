@@ -15,12 +15,53 @@ import type { GridProps } from "../types/grid";
 // Register GSAP plugins
 gsap.registerPlugin(useGSAP, ScrollTrigger, Draggable, InertiaPlugin);
 
-const debounce = (fn: Function, ms: number) => {
+const debounce = <T extends (...args: any[]) => any>(
+  fn: T,
+  ms: number
+): ((...args: Parameters<T>) => void) => {
   let timeoutId: ReturnType<typeof setTimeout>;
-  return function (this: any, ...args: any[]) {
+  return (...args: Parameters<T>) => {
     clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => fn.apply(this, args), ms);
+    timeoutId = setTimeout(() => fn(...args), ms);
   };
+};
+
+// Types for position map
+type PositionData = {
+  rowIndex: number;
+  imgIndex: number;
+};
+
+type PositionMap = Map<HTMLElement, PositionData>;
+
+// Position map creation with proper reference tracking
+const createPositionMap = (
+  rowRefs: React.MutableRefObject<(HTMLDivElement | null)[]>,
+  imageRefs: React.MutableRefObject<(HTMLDivElement | null)[][]>,
+): PositionMap => {
+  const map: PositionMap = new Map();
+
+  // Ensure we're working with current refs
+  const currentRows = rowRefs.current;
+  const currentImages = imageRefs.current;
+
+  if (!currentRows || !currentImages) return map;
+
+  // Build position map
+  currentRows.forEach((row, rowIndex) => {
+    if (!row) return;
+    
+    const images = currentImages[rowIndex];
+    if (!images) return;
+
+    images.forEach((img, imgIndex) => {
+      if (img && img.isConnected) { // Check if element is still in DOM
+        map.set(img, { rowIndex, imgIndex });
+      }
+    });
+  });
+
+  return map;
 };
 
 const InfiniteImageGrid: React.FC<GridProps> = ({
@@ -44,6 +85,7 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
   // Add cleanup and optimization
   const cleanup = useCallback(() => {
     // Clear animation refs
+    ScrollTrigger.killAll();
     if (scrollAnimationRef.current) {
       scrollAnimationRef.current.kill();
       scrollAnimationRef.current = null;
@@ -77,23 +119,6 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
       cleanup();
     };
   }, [cleanup]);
-
-  const createPositionMap = (
-    rowRefs: React.MutableRefObject<(HTMLDivElement | null)[]>,
-    imageRefs: React.MutableRefObject<(HTMLDivElement | null)[][]>,
-  ) => {
-    const map = new Map<HTMLElement, { rowIndex: number; imgIndex: number }>();
-
-    rowRefs.current.forEach((row, rowIndex) => {
-      if (!row) return;
-      const images = imageRefs.current[rowIndex] || [];
-      images.forEach((img, imgIndex) => {
-        if (img) map.set(img, { rowIndex, imgIndex });
-      });
-    });
-
-    return map;
-  };
 
   const checkPositions = useCallback(
     (elem: HTMLElement) => {
@@ -517,6 +542,9 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
   return (
     <div
       ref={containerRef}
+      role="grid"
+      aria-rowcount={rowCount}
+      aria-colcount={imagesPerRow}
       className="overflow-hidden w-screen h-screen fixed inset-0 bg-gray-100"
     >
       <div
