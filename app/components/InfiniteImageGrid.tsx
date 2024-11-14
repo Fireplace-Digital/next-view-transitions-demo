@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useCallback } from "react";
+import React, { useRef, useCallback, useEffect } from "react";
 import Image from "next/image";
 import { Link } from "next-view-transitions";
 import { useGSAP } from "@gsap/react";
@@ -14,6 +14,14 @@ import type { GridProps } from "../types/grid";
 
 // Register GSAP plugins
 gsap.registerPlugin(useGSAP, ScrollTrigger, Draggable, InertiaPlugin);
+
+const debounce = (fn: Function, ms: number) => {
+  let timeoutId: ReturnType<typeof setTimeout>;
+  return function (this: any, ...args: any[]) {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn.apply(this, args), ms);
+  };
+};
 
 const InfiniteImageGrid: React.FC<GridProps> = ({
   images,
@@ -33,37 +41,69 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
 
   const dimensions = useGridDimensions(imgMidIndex, rowMidIndex);
 
-  // Basic mouse event debug
-  // useEffect(() => {
-  //   const grid = gridRef.current;
-  //   if (!grid) return;
+  // Add cleanup and optimization
+  const cleanup = useCallback(() => {
+    // Clear animation refs
+    if (scrollAnimationRef.current) {
+      scrollAnimationRef.current.kill();
+      scrollAnimationRef.current = null;
+    }
+    if (dragInstanceRef.current) {
+      dragInstanceRef.current.kill();
+      dragInstanceRef.current = null;
+    }
 
-  //   const handleMouseDown = (e: MouseEvent) => {
-  //     console.log("Mouse down on grid", e.clientX, e.clientY);
-  //   };
+    // Clear row and image refs
+    rowRefs.current = [];
+    imageRefs.current = [];
+  }, []);
 
-  //   grid.addEventListener("mousedown", handleMouseDown);
-  //   return () => grid.removeEventListener("mousedown", handleMouseDown);
-  // }, []);
+  // Add resize handler with debounce
+  useEffect(() => {
+    let resizeTimeout: NodeJS.Timeout;
+
+    const handleResize = () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        cleanup();
+        // Re-initialize grid
+      }, 150);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      clearTimeout(resizeTimeout);
+      cleanup();
+    };
+  }, [cleanup]);
+
+  const createPositionMap = (
+    rowRefs: React.MutableRefObject<(HTMLDivElement | null)[]>,
+    imageRefs: React.MutableRefObject<(HTMLDivElement | null)[][]>,
+  ) => {
+    const map = new Map<HTMLElement, { rowIndex: number; imgIndex: number }>();
+
+    rowRefs.current.forEach((row, rowIndex) => {
+      if (!row) return;
+      const images = imageRefs.current[rowIndex] || [];
+      images.forEach((img, imgIndex) => {
+        if (img) map.set(img, { rowIndex, imgIndex });
+      });
+    });
+
+    return map;
+  };
 
   const checkPositions = useCallback(
     (elem: HTMLElement) => {
-      let rowIndex = -1;
-      let imgIndex = -1;
+      // Create position map for O(1) lookup
+      const positionMap = createPositionMap(rowRefs, imageRefs);
+      const position = positionMap.get(elem);
 
-      rowRefs.current.forEach((row, i) => {
-        if (!row) return;
-        const images = imageRefs.current[i] || [];
-        images.forEach((img, j) => {
-          if (img && elem.isSameNode(img)) {
-            rowIndex = i;
-            imgIndex = j;
-          }
-        });
-      });
+      if (!position) return;
 
-      if (rowIndex === -1) return;
-
+      const { rowIndex, imgIndex } = position;
       const { boxWidth, boxHeight, gutter } = dimensions;
 
       // Handle row repositioning
@@ -85,6 +125,7 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
             gsap.set(lastRow, { y: rowY - gutter - boxHeight });
           }
 
+          // Update refs arrays
           moveArrayIndex(rowRefs.current, rowRefs.current.length - 1, 0);
           moveArrayIndex(imageRefs.current, imageRefs.current.length - 1, 0);
         }
@@ -258,6 +299,16 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
     });
   }, [dimensions, images, rowCount, imagesPerRow, imgMidIndex, rowMidIndex]);
 
+  const debouncedCenterCheck = debounce((x: number, y: number) => {
+    const centerElem = document.elementFromPoint(x, y);
+    if (
+      centerElem instanceof HTMLElement &&
+      centerElem.classList.contains("grid-image")
+    ) {
+      checkPositions(centerElem);
+    }
+  }, 16); // 16ms = roughly one frame
+
   // Draggable initialization with debug logging
   // Initialize ScrollTrigger and Draggable
   useGSAP(
@@ -309,7 +360,10 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
         type: "x,y",
         inertia: true,
         onDrag: updateCenterImage,
-        onThrowUpdate: updateCenterImage,
+        onThrowUpdate: () => {
+          debouncedCenterCheck(dimensions.winMidX, dimensions.winMidY);
+          updateCenterImage();
+        },
         dragResistance: SCROLL_RESISTANCE,
         throwProps: true,
         edgeResistance: SCROLL_RESISTANCE,
@@ -406,7 +460,10 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
               end: currentY - deltaY * SCROLL_SPEED,
             },
           },
-          onUpdate: updateCenterImage,
+          onUpdate: () => {
+            debouncedCenterCheck(dimensions.winMidX, dimensions.winMidY);
+            updateCenterImage();
+          },
           onComplete: () => {
             // Snap to nearest image after scroll
             if (!gridRef.current) return;
@@ -453,7 +510,7 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
     },
     {
       scope: containerRef,
-      dependencies: [dimensions, updateCenterImage],
+      dependencies: [dimensions, updateCenterImage, debouncedCenterCheck],
     },
   );
 
