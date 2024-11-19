@@ -90,14 +90,14 @@ export default function ImageDialog({
                 width={800}
                 height={600}
                 className="rounded-lg object-contain"
-                style={{ viewTransitionName: `image-${image.id}-pos-${position.r}-${position.c}` }}
+                style={{ viewTransitionName: `image-${image.id}-${searchParams.instance || '0-0'}` }}
               />
             </div>
 
             <DialogHeader className="w-full mt-4">
               <DialogTitle
                 className="text-2xl text-white text-center"
-                style={{ viewTransitionName: `title-${image.id}-pos-${position.r}-${position.c}` }}
+                style={{ viewTransitionName: `title-${image.id}-${searchParams.instance || '0-0'}` }}
               >
                 {image.title}
               </DialogTitle>
