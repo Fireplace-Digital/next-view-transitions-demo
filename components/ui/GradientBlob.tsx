@@ -88,21 +88,21 @@ export function GradientBlob() {
       transition={{
         x: {
           type: "spring",
-          mass: 0.3,
-          stiffness: 80,
-          damping: 15,
+          mass: 0.2,
+          stiffness: 400,
+          damping: 30,
           restDelta: 0.001
         },
         y: {
           type: "spring",
-          mass: 0.3,
-          stiffness: 80,
-          damping: 15,
+          mass: 0.2,
+          stiffness: 400,
+          damping: 30,
           restDelta: 0.001
         },
         opacity: {
-          duration: 0.2,
-          ease: "easeInOut"
+          duration: 0.15,
+          ease: "easeOut"
         }
       }}
       style={{

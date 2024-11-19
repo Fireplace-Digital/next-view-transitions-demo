@@ -11,6 +11,7 @@ import { InertiaPlugin } from "gsap/InertiaPlugin";
 import { useGridDimensions } from "../hooks/useGridDimensions";
 import { moveArrayIndex } from "../utils/arrayUtils";
 import type { GridProps, ImageType } from "../types/grid";
+import { useProject } from '@/lib/project-context';
 
 const InfiniteImageGrid: React.FC<GridProps> = ({
     images,
@@ -28,6 +29,8 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
     const rowMidIndex = Math.floor(rowCount / 2);
 
     const dimensions = useGridDimensions(imgMidIndex, rowMidIndex);
+
+    const { setHoveredProject } = useProject();
 
     useLayoutEffect(() => {
         // Register GSAP plugins
@@ -220,6 +223,8 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
                                 <Link
                                     href={`/image/${image.id}?instance=${rowIndex}-${colIndex}`}
                                     className="block w-full h-full relative"
+                                    onMouseEnter={() => setHoveredProject(image.title)}
+                                    onMouseLeave={() => setHoveredProject(null)}
                                 >
                                     <Image
                                         src={image.url}
@@ -241,7 +246,7 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
                 </div>
             );
         });
-    }, [dimensions, images, rowCount, imagesPerRow, imgMidIndex, rowMidIndex]);
+    }, [dimensions, images, rowCount, imagesPerRow, imgMidIndex, rowMidIndex, setHoveredProject]);
 
     useGSAP(
         () => {
