@@ -1,5 +1,6 @@
 import ImageGallery from "./components/ImageGallery";
 
+
 export default function Home() {
   return (
     <main className="min-h-screen p-4">

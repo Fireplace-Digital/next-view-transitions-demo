@@ -101,6 +101,7 @@ export default function ImageDialog({
               >
                 {image.title}
               </DialogTitle>
+              <DialogDescription />
             </DialogHeader>
           </div>
         </div>
