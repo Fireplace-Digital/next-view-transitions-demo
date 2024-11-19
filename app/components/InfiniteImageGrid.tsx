@@ -11,6 +11,7 @@ import { Draggable } from "gsap/Draggable";
 import { useGridDimensions } from "../hooks/useGridDimensions";
 import { moveArrayIndex } from "../utils/arrayUtils";
 import type { GridProps } from "../types/grid";
+import GridImage from "../components/GridImage";
 
 // Register GSAP plugins
 gsap.registerPlugin(useGSAP, ScrollTrigger, Draggable, InertiaPlugin);
@@ -280,44 +281,22 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
             const imageIndex =
               (rowIndex * imagesPerRow + colIndex) % images.length;
             const image = images[imageIndex];
-            const imageX = colIndex * horizSpacing;
 
             return (
-              <div
+              <GridImage
                 key={`${rowIndex}-${colIndex}`}
-                ref={(el: HTMLDivElement | null) => {
+                rowIndex={rowIndex}
+                colIndex={colIndex}
+                image={image}
+                dimensions={dimensions}
+                imageRef={(el: HTMLDivElement | null) => {
                   if (!imageRefs.current[rowIndex]) {
                     imageRefs.current[rowIndex] = [];
                   }
                   imageRefs.current[rowIndex][colIndex] = el;
                 }}
-                className="grid-image absolute"
-                style={{
-                  transform: `translateX(${imageX}px)`,
-                  width: boxWidth,
-                  height: boxHeight,
-                  // Center the image vertically in the row
-                  top: (vertSpacing - boxHeight) / 2,
-                }}
-              >
-                <Link
-                  href={`/image/${image.id}?r=${rowIndex}&c=${colIndex}&p=${(rowIndex * imagesPerRow + colIndex) % images.length}`}
-                  className="block w-full h-full relative"
-                  prefetch
-                >
-                  <Image
-                    src={image.url}
-                    alt={image.title}
-                    fill
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                    className="rounded-lg transition-opacity hover:opacity-90 object-cover"
-                    style={{ viewTransitionName: `image-${image.id}-pos-${rowIndex}-${colIndex}` }}
-                    priority={
-                      rowIndex === rowMidIndex && colIndex === imgMidIndex
-                    }
-                  />
-                </Link>
-              </div>
+                isPriority={rowIndex < 2 && colIndex < 3}
+              />
             );
           })}
         </div>
@@ -536,7 +515,8 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
       role="grid"
       aria-rowcount={rowCount}
       aria-colcount={imagesPerRow}
-      className="overflow-hidden w-screen h-screen fixed inset-0 bg-gray-100"
+      className="overflow-hidden w-screen h-screen fixed inset-0"
+      style={{ zIndex: 1 }}
     >
       <div
         ref={gridRef}

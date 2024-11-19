@@ -11,8 +11,12 @@
   "dependencies": {
     "@gsap/react": "^2.1.1",
     "@radix-ui/react-dialog": "^1.1.2",
+    "@react-three/drei": "^9.117.2",
+    "@react-three/fiber": "^8.17.10",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
+    "framer-motion": "^11.11.17",
+    "glsl-noise": "^0.0.0",
     "gsap": "npm:gsap-trial@^3.12.5",
     "lucide-react": "^0.454.0",
     "next": "^14.2.17",
@@ -20,7 +24,8 @@
     "react": "^18",
     "react-dom": "^18",
     "tailwind-merge": "^2.5.4",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "three": "^0.170.0"
   },
   "devDependencies": {
     "@types/node": "^20",
@@ -29,6 +34,7 @@
     "eslint": "^8",
     "eslint-config-next": "14.2.6",
     "postcss": "^8",
+    "raw-loader": "^4.0.2",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
   }

@@ -80,7 +80,7 @@ export default function ImageDialog({
           )}
 
           <div
-            className="relative max-w-7xl mx-auto w-full h-full flex flex-col items-center justify-center p-6"
+            className="relative max-w-7xl mx-auto w-full h-full flex flex-col items-center justify-center p-6 pb-24"
             style={{ viewTransitionName: `container-${image.id}-pos-${position.r}-${position.c}` }}
           >
             <div className="relative w-full aspect-[4/3] max-h-[80vh]">
