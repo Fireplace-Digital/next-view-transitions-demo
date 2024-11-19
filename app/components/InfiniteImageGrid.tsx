@@ -227,8 +227,8 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
                                         fill
                                         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                                         className="rounded-lg transition-opacity hover:opacity-90 object-cover"
-                                        style={{ 
-                                            viewTransitionName: `image-${image.id}-${rowIndex}-${colIndex}` 
+                                        style={{
+                                            viewTransitionName: `image-${image.id}-${rowIndex}-${colIndex}`
                                         }}
                                         priority={
                                             rowIndex === rowMidIndex && colIndex === imgMidIndex
@@ -273,13 +273,30 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
                     const targetX = currentX + (dimensions.winMidX - (bcr.x + bcr.width / 2));
                     const targetY = currentY + (dimensions.winMidY - (bcr.y + bcr.height / 2));
 
-                    gsap.to(gridRef.current, {
-                        x: targetX,
-                        y: targetY,
-                        duration: duration,
-                        ease: SNAP_EASE,
-                        onUpdate: updateCenterImage
-                    });
+                    // gsap.to(gridRef.current, {
+                    //     x: targetX,
+                    //     y: targetY,
+                    //     duration: duration,
+                    //     ease: SNAP_EASE,
+                    //     onUpdate: updateCenterImage
+                    // });
+                    const distanceX = Math.abs(targetX - currentX);
+                    const distanceY = Math.abs(targetY - currentY);
+
+                    if (distanceX > 10 || distanceY > 10) {
+                        gsap.to(gridRef.current, {
+                            x: targetX,
+                            y: targetY,
+                            duration: duration,
+                            ease: SNAP_EASE,
+                            onUpdate: () => {
+                                const progress = Number(gsap.getProperty(gridRef.current, "progress"));
+                                if (progress > 0.8) {
+                                    updateCenterImage();
+                                }
+                            },
+                        });
+                    }
                 }
             };
 
@@ -312,37 +329,65 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
             dragInstanceRef.current = Draggable.create(gridRef.current, {
                 type: "x,y",
                 inertia: true,
-                dragResistance: SCROLL_RESISTANCE,
-                edgeResistance: SCROLL_RESISTANCE,
-                throwResistance: SCROLL_RESISTANCE,
+                // dragResistance: SCROLL_RESISTANCE,
+                // edgeResistance: SCROLL_RESISTANCE,
+                // throwResistance: SCROLL_RESISTANCE,
+                dragResistance: 0.4,
+                edgeResistance: 0.4,
+                throwResistance: 0.4,
+                maxDuration: 0.8,
+                minDuration: 0.3,
+                overshootTolerance: 0.8,
                 onDragStart: () => {
                     st.disable(); // Disable ScrollTrigger during drag
                 },
-                onDrag: updateCenterImage,
-                onDragEnd: () => {
-                    st.enable(); // Re-enable ScrollTrigger
-                    snapToNearestImage();
+                // onDrag: updateCenterImage,
+                onDrag: () => {
+                    const dx = dragInstanceRef.current?.deltaX || 0;
+                    const dy = dragInstanceRef.current?.deltaY || 0;
+                    const dragSpeed = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dragSpeed < 10) {
+                        updateCenterImage();
+                    }
                 },
-                snap: {
-                    x: (endValue) => {
-                        const centerElem = document.elementFromPoint(
-                            dimensions.winMidX,
-                            dimensions.winMidY
-                        );
-                        if (!centerElem?.classList.contains("grid-image")) return endValue;
-                        const bcr = centerElem.getBoundingClientRect();
-                        return endValue + (dimensions.winMidX - (bcr.x + bcr.width / 2));
-                    },
-                    y: (endValue) => {
-                        const centerElem = document.elementFromPoint(
-                            dimensions.winMidX,
-                            dimensions.winMidY
-                        );
-                        if (!centerElem?.classList.contains("grid-image")) return endValue;
-                        const bcr = centerElem.getBoundingClientRect();
-                        return endValue + (dimensions.winMidY - (bcr.y + bcr.height / 2));
+                onThrowUpdate: updateCenterImage,
+                onDragEnd: function () {
+                    st.enable(); // Re-enable ScrollTrigger
+                    const velocityX = this.endX - this.x;
+                    const velocityY = this.endY - this.y;
+                    const velocity = Math.sqrt(velocityX * velocityX + velocityY * velocityY);
+
+                    if (Math.abs(velocity) < 50) {
+                        snapToNearestImage(0.4);
+                    } else {
+                        gsap.delayedCall(0.4, () => snapToNearestImage(0.8));
                     }
                 }
+                // onDragEnd: () => {
+                //     st.enable(); // Re-enable ScrollTrigger
+                //     snapToNearestImage();
+                // },
+                // snap: {
+                //     x: (endValue) => {
+                //         const centerElem = document.elementFromPoint(
+                //             dimensions.winMidX,
+                //             dimensions.winMidY
+                //         );
+                //         if (!centerElem?.classList.contains("grid-image")) return endValue;
+                //         const bcr = centerElem.getBoundingClientRect();
+                //         return endValue + (dimensions.winMidX - (bcr.x + bcr.width / 2));
+                //     },
+                //     y: (endValue) => {
+                //         const centerElem = document.elementFromPoint(
+                //             dimensions.winMidX,
+                //             dimensions.winMidY
+                //         );
+                //         if (!centerElem?.classList.contains("grid-image")) return endValue;
+                //         const bcr = centerElem.getBoundingClientRect();
+                //         return endValue + (dimensions.winMidY - (bcr.y + bcr.height / 2));
+                //     }
+                // }
             })[0];
 
             // Handle wheel events for precise control
