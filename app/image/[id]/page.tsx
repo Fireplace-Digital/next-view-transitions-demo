@@ -36,7 +36,7 @@ export default function ImagePage({ params, searchParams }: { params: { id: stri
   return (
     <ImageDialog
       image={image}
-      searchParams={{ ...searchParams, p: positionIndex.toString() }}
+      searchParams={searchParams}
       previousImageId={previousImage.id}
       nextImageId={nextImage.id}
       previousImageParams={previousImageParams}

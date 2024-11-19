@@ -220,7 +220,7 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
                                 }}
                             >
                                 <Link
-                                    href={`/image/${image.id}`}
+                                    href={`/image/${image.id}?instance=${rowIndex}-${colIndex}`}
                                     className="block w-full h-full relative"
                                 >
                                     <Image
@@ -229,7 +229,9 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
                                         fill
                                         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                                         className="rounded-lg transition-opacity hover:opacity-90 object-cover"
-                                        style={{ viewTransitionName: `image-${image.id}-pos-${rowIndex}-${colIndex}` }}
+                                        style={{ 
+                                            viewTransitionName: `image-${image.id}-${rowIndex}-${colIndex}` 
+                                        }}
                                         priority={
                                             rowIndex === rowMidIndex && colIndex === imgMidIndex
                                         }

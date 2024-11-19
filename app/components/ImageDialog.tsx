@@ -81,7 +81,7 @@ export default function ImageDialog({
 
           <div
             className="relative max-w-7xl mx-auto w-full h-full flex flex-col items-center justify-center p-6"
-            style={{ viewTransitionName: `container-${image.id}-pos-${position.r}-${position.c}` }}
+            style={{ viewTransitionName: `container-${image.id}-${searchParams.instance || '0-0'}` }}
           >
             <div className="relative w-full aspect-[4/3] max-h-[80vh]">
               <Image
@@ -90,14 +90,14 @@ export default function ImageDialog({
                 width={800}
                 height={600}
                 className="rounded-lg object-contain"
-                style={{ viewTransitionName: `image-${image.id}-pos-${position.r}-${position.c}` }}
+                style={{ viewTransitionName: `image-${image.id}-${searchParams.instance || '0-0'}` }}
               />
             </div>
 
             <DialogHeader className="w-full mt-4">
               <DialogTitle
                 className="text-2xl text-white text-center"
-                style={{ viewTransitionName: `title-${image.id}-pos-${position.r}-${position.c}` }}
+                style={{ viewTransitionName: `title-${image.id}-${searchParams.instance || '0-0'}` }}
               >
                 {image.title}
               </DialogTitle>
