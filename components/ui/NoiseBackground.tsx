@@ -10,8 +10,9 @@ export function NoiseBackground() {
   const resizeThrottleRef = useRef<number>();
 
   const createNoise = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
-    const imageData = ctx.createImageData(width, height);
-    const buffer32 = new Uint32Array(imageData.data.buffer);
+    console.log('Creating noise frame...');
+    const idata = ctx.createImageData(width, height);
+    const buffer32 = new Uint32Array(idata.data.buffer);
     const len = buffer32.length;
 
     for (let i = 0; i < len; i++) {
@@ -20,7 +21,7 @@ export function NoiseBackground() {
       }
     }
 
-    noiseDataRef.current.push(imageData);
+    noiseDataRef.current.push(idata);
   };
 
   const paintNoise = (ctx: CanvasRenderingContext2D) => {
@@ -42,17 +43,35 @@ export function NoiseBackground() {
   };
 
   const setup = () => {
+    console.log('Setting up noise effect...');
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) {
+      console.error('Canvas element not found');
+      return;
+    }
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) {
+      console.error('Could not get canvas context');
+      return;
+    }
 
-    const width = window.innerWidth;
-    const height = window.innerHeight;
+    // Scale down the canvas size to create bigger pixels
+    const scale = 2; // Increase this number for bigger pixels
+    const width = Math.floor(window.innerWidth / scale);
+    const height = Math.floor(window.innerHeight / scale);
+
+    console.log(`Canvas dimensions: ${width}x${height}`);
 
     canvas.width = width;
     canvas.height = height;
+
+    // Set CSS size to full window size for scaling
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+
+    // Use nearest-neighbor scaling for sharp pixels
+    ctx.imageSmoothingEnabled = false;
 
     // Clear previous noise data
     noiseDataRef.current = [];
@@ -62,13 +81,16 @@ export function NoiseBackground() {
       createNoise(ctx, width, height);
     }
 
+    console.log(`Created ${noiseDataRef.current.length} noise frames`);
     loop(ctx);
   };
 
   useEffect(() => {
+    console.log('NoiseBackground component mounted');
     setup();
 
     const handleResize = () => {
+      console.log('Window resized');
       window.clearTimeout(resizeThrottleRef.current);
 
       resizeThrottleRef.current = window.setTimeout(() => {
@@ -80,6 +102,7 @@ export function NoiseBackground() {
     window.addEventListener('resize', handleResize);
 
     return () => {
+      console.log('Cleaning up noise effect');
       window.removeEventListener('resize', handleResize);
       window.clearTimeout(loopTimeoutRef.current);
       window.clearTimeout(resizeThrottleRef.current);
@@ -90,8 +113,9 @@ export function NoiseBackground() {
     <canvas
       ref={canvasRef}
       id="noise"
-      className="fixed inset-0 w-full h-full pointer-events-none opacity-[0.15] mix-blend-overlay"
+      className="noise"
       aria-hidden="true"
+      style={{ opacity: 0.4 }}
     />
   );
 }

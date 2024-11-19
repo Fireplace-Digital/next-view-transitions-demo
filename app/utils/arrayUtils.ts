@@ -6,6 +6,25 @@ export function moveArrayIndex(array: any[], oldIndex: number, newIndex: number)
   return array;
 }
 
+// Define possible aspect ratios
+const aspectRatios = [
+  { width: 2, height: 1 },  // 2:1
+  { width: 1, height: 1 },  // 1:1
+  { width: 2, height: 3 },  // 2:3
+  { width: 3, height: 2 }   // 3:2
+];
+
+// Get random aspect ratio
+export function getRandomAspectRatio() {
+  return aspectRatios[Math.floor(Math.random() * aspectRatios.length)];
+}
+
+// Seed for consistent randomization per position
+function seededRandom(seed: number) {
+  const x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
+}
+
 export function calculateDimensions(
   windowWidth: number,
   windowHeight: number,
