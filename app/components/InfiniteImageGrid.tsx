@@ -12,8 +12,6 @@ import { useGridDimensions } from "../hooks/useGridDimensions";
 import { moveArrayIndex } from "../utils/arrayUtils";
 import type { GridProps, ImageType } from "../types/grid";
 
-
-
 const InfiniteImageGrid: React.FC<GridProps> = ({
     images,
     rowCount = 5,
@@ -248,10 +246,10 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
             if (!containerRef.current || !gridRef.current) return;
 
             // Constants for scroll behavior
-            const SCROLL_SPEED = 1.8;
-            const SCROLL_SMOOTHING = 0.5;
-            const SCROLL_RESISTANCE = 0.2;
-            const SNAP_DURATION = 0.6;
+            const SCROLL_SPEED = 1.2;
+            const SCROLL_SMOOTHING = 0.3;
+            const SCROLL_RESISTANCE = 0.4;
+            const SNAP_DURATION = 0.5;
             const SNAP_EASE = "power2.out";
 
             // Helper function for snapping to nearest image
@@ -273,23 +271,13 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
                     const targetX = currentX + (dimensions.winMidX - (bcr.x + bcr.width / 2));
                     const targetY = currentY + (dimensions.winMidY - (bcr.y + bcr.height / 2));
 
-                    const distanceX = Math.abs(targetX - currentX);
-                    const distanceY = Math.abs(targetY - currentY);
-
-                    if (distanceX > 10 || distanceY > 10) {
-                        gsap.to(gridRef.current, {
-                            x: targetX,
-                            y: targetY,
-                            duration: duration,
-                            ease: SNAP_EASE,
-                            onUpdate: () => {
-                                const progress = Number(gsap.getProperty(gridRef.current, "progress"));
-                                if (progress > 0.8) {
-                                    updateCenterImage();
-                                }
-                            },
-                        });
-                    }
+                    gsap.to(gridRef.current, {
+                        x: targetX,
+                        y: targetY,
+                        duration: duration,
+                        ease: SNAP_EASE,
+                        onUpdate: updateCenterImage
+                    });
                 }
             };
 
@@ -322,31 +310,35 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
             dragInstanceRef.current = Draggable.create(gridRef.current, {
                 type: "x,y",
                 inertia: true,
-                dragResistance: 0.4,
-                edgeResistance: 0.4,
-                throwResistance: 0.4,
-                maxDuration: 0.8,
-                minDuration: 0.3,
-                overshootTolerance: 0.8,
-                onDrag: () => {
-                    const dx = dragInstanceRef.current?.deltaX || 0;
-                    const dy = dragInstanceRef.current?.deltaY || 0;
-                    const dragSpeed = Math.sqrt(dx * dx + dy * dy);
-
-                    if (dragSpeed < 10) {
-                        updateCenterImage();
-                    }
+                dragResistance: SCROLL_RESISTANCE,
+                edgeResistance: SCROLL_RESISTANCE,
+                throwResistance: SCROLL_RESISTANCE,
+                onDragStart: () => {
+                    st.disable(); // Disable ScrollTrigger during drag
                 },
-                onThrowUpdate: updateCenterImage,
-                onDragEnd: function () {
-                    const velocityX = this.endX - this.x;
-                    const velocityY = this.endY - this.y;
-                    const velocity = Math.sqrt(velocityX * velocityX + velocityY * velocityY);
-
-                    if (Math.abs(velocity) < 50) {
-                        snapToNearestImage(0.4);
-                    } else {
-                        gsap.delayedCall(0.4, () => snapToNearestImage(0.8));
+                onDrag: updateCenterImage,
+                onDragEnd: () => {
+                    st.enable(); // Re-enable ScrollTrigger
+                    snapToNearestImage();
+                },
+                snap: {
+                    x: (endValue) => {
+                        const centerElem = document.elementFromPoint(
+                            dimensions.winMidX,
+                            dimensions.winMidY
+                        );
+                        if (!centerElem?.classList.contains("grid-image")) return endValue;
+                        const bcr = centerElem.getBoundingClientRect();
+                        return endValue + (dimensions.winMidX - (bcr.x + bcr.width / 2));
+                    },
+                    y: (endValue) => {
+                        const centerElem = document.elementFromPoint(
+                            dimensions.winMidX,
+                            dimensions.winMidY
+                        );
+                        if (!centerElem?.classList.contains("grid-image")) return endValue;
+                        const bcr = centerElem.getBoundingClientRect();
+                        return endValue + (dimensions.winMidY - (bcr.y + bcr.height / 2));
                     }
                 }
             })[0];
@@ -386,7 +378,7 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
     return (
         <div
             ref={containerRef}
-            className="overflow-hidden w-screen h-screen fixed inset-0 bg-gray-100"
+            className="overflow-hidden w-screen h-screen fixed inset-0"
         >
             <div
                 ref={gridRef}
