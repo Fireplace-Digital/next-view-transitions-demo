@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useCallback, useEffect, useLayoutEffect } from "react";
+import React, { useRef, useCallback, useLayoutEffect, useMemo, memo } from "react";
 import Image from "next/image";
 import { Link } from "next-view-transitions";
 import { useGSAP } from "@gsap/react";
@@ -11,7 +11,8 @@ import { InertiaPlugin } from "gsap/InertiaPlugin";
 import { useGridDimensions } from "../hooks/useGridDimensions";
 import { moveArrayIndex } from "../utils/arrayUtils";
 import type { GridProps, ImageType } from "../types/grid";
-import { useProject } from '@/lib/project-context';
+
+import { useProjectStore } from "@/stores/projectStore";
 
 const InfiniteImageGrid: React.FC<GridProps> = ({
     images,
@@ -30,7 +31,7 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
 
     const dimensions = useGridDimensions(imgMidIndex, rowMidIndex);
 
-    const { setHoveredProject } = useProject();
+    const { setProjectName } = useProjectStore();
 
     useLayoutEffect(() => {
         // Register GSAP plugins
@@ -164,7 +165,7 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
         }
     }, [dimensions, checkPositions]);
 
-    const renderGrid = useCallback(() => {
+    const renderGrid = useMemo(() => {
         const rows = Array(rowCount).fill(null);
         const {
             boxWidth,
@@ -223,8 +224,8 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
                                 <Link
                                     href={`/image/${image.id}?instance=${rowIndex}-${colIndex}`}
                                     className="block w-full h-full relative"
-                                    onMouseEnter={() => setHoveredProject(image.title)}
-                                    onMouseLeave={() => setHoveredProject(null)}
+                                    onMouseEnter={() => setProjectName(image.title)}
+                                // onMouseLeave={() => setProjectName("")}
                                 >
                                     <Image
                                         src={image.url}
@@ -246,7 +247,7 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
                 </div>
             );
         });
-    }, [dimensions, images, rowCount, imagesPerRow, imgMidIndex, rowMidIndex, setHoveredProject]);
+    }, [dimensions, images, rowCount, imagesPerRow, imgMidIndex, rowMidIndex]);
 
     useGSAP(
         () => {
@@ -351,7 +352,7 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
                     }
                 },
                 onThrowUpdate: updateCenterImage,
-                onDragEnd: function() {
+                onDragEnd: function () {
                     st.enable(); // Re-enable ScrollTrigger
                     updateCenterImage();
                 }
@@ -408,7 +409,7 @@ const InfiniteImageGrid: React.FC<GridProps> = ({
                     padding: `${dimensions.vertSpacing}px ${dimensions.horizSpacing}px`,
                 }}
             >
-                {renderGrid()}
+                {renderGrid}
             </div>
         </div>
     );

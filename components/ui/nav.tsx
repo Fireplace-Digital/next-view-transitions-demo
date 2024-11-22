@@ -2,11 +2,12 @@
 
 import { usePathname } from 'next/navigation';
 import { cn } from "@/lib/utils";
-import { useProject } from '@/lib/project-context';
+
 import { useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GradientBlob } from './GradientBlob';
+import { useProjectStore } from '@/stores/projectStore';
 
 interface NavProps {
   projectTitle?: string;
@@ -19,9 +20,11 @@ const menuItems = [
 ];
 
 export function Nav({ projectTitle }: NavProps) {
-  const { hoveredProject } = useProject();
+  const { projectName } = useProjectStore();
+
   const pathname = usePathname();
   const [showMenu, setShowMenu] = useState(false);
+
 
   return (
     <>
@@ -39,17 +42,17 @@ export function Nav({ projectTitle }: NavProps) {
 
           <AnimatePresence mode="wait">
             <motion.div
-              key={hoveredProject || "default"}
+              key={projectName || "default"}
               className="text-lg cursor-default"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              transition={{ 
+              transition={{
                 duration: 0.3,
                 ease: [0.23, 1, 0.32, 1]
               }}
             >
-              {hoveredProject || "Designs with logic and love"}
+              {projectName || "Designs with logic and love"}
             </motion.div>
           </AnimatePresence>
         </div>
@@ -62,7 +65,7 @@ export function Nav({ projectTitle }: NavProps) {
           </div>
 
           {/* Menu */}
-          <div 
+          <div
             className="relative"
             onMouseEnter={() => setShowMenu(true)}
             onMouseLeave={() => setShowMenu(false)}

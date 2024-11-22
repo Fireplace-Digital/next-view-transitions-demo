@@ -18,16 +18,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={inter.className} suppressHydrationWarning>
-        <ProjectProvider>
-          <ViewTransitions fallback={<div>Loading...</div>}>
-            <NoiseBackground />
-            {children}
-            <Nav />
-          </ViewTransitions>
-        </ProjectProvider>
-      </body>
-    </html>
+    <ViewTransitions>
+      <html lang="en">
+        <head>
+          <script src="https://unpkg.com/react-scan/dist/auto.global.js" async></script>
+        </head>
+        <body className={inter.className}>
+          <NoiseBackground />
+          {children}
+          <Nav />
+        </body>
+      </html>
+    </ViewTransitions>
   );
 }
